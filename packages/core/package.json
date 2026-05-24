@@ -20,14 +20,14 @@
     "audit",
     "safety"
   ],
-  "homepage": "https://github.com/webmcp-js/webmcp-js#readme",
+  "homepage": "https://github.com/beladevo/webmcp.js#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webmcp-js/webmcp-js.git",
+    "url": "git+https://github.com/beladevo/webmcp.js.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/webmcp-js/webmcp-js/issues"
+    "url": "https://github.com/beladevo/webmcp.js/issues"
   },
   "publishConfig": {
     "access": "public"
