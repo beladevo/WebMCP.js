@@ -1,5 +1,5 @@
 {
   "buildCommand": "pnpm --filter \"webmcp-js-vanilla-example\" build",
-  "outputDirectory": "examples/vanilla/dist",
+  "outputDirectory": "dist",
   "installCommand": "pnpm install"
 }
