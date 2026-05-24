@@ -38,7 +38,7 @@ export default defineConfig({
         ]
       }
     ],
-    socialLinks: [{ icon: "github", link: "https://github.com/webmcp-js/webmcp-js" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/beladevo/webmcp.js" }],
     search: {
       provider: "local"
     },
