@@ -1,8 +1,23 @@
 # @webmcp-js/core
 
-Core TypeScript toolkit for exposing typed, validated, approval-aware WebMCP tools.
+Type-safe WebMCP toolkit for registering validated, approval-aware browser tools.
 
-webmcp.js helps a web app register structured tools with `navigator.modelContext` when that API exists. It does not define a new protocol and does not install a WebMCP runtime.
+`@webmcp-js/core` gives product teams a small, practical layer for exposing page actions to WebMCP-capable browsers and agents. Define a tool once with TypeScript, validate input with Zod, generate JSON Schema for registration, and keep sensitive actions behind explicit approval.
+
+Use it for actions like product search, cart operations, checkout starts, support ticket creation, dashboard queries, or any other workflow where an AI agent should call a narrow, structured browser capability instead of guessing through the DOM.
+
+## Why Use It
+
+- Register typed tools with `navigator.modelContext` when WebMCP is available.
+- Keep the app usable in unsupported browsers through local tool handles.
+- Validate every input with Zod before your application code runs.
+- Generate JSON Schema-compatible input and output schemas.
+- Mark tool risk levels and require approval for sensitive actions.
+- Add custom approval flows for high-impact operations.
+- Redact audit events before they reach logs.
+- Ship a tiny ESM package with TypeScript types.
+
+webmcp.js does not define a new protocol and does not install a WebMCP runtime. It is a developer toolkit for the browser API surface as it emerges.
 
 ## Install
 
@@ -40,6 +55,13 @@ mcp.tool("products.search", {
 ```
 
 If `navigator.modelContext.registerTool` is available, the tool is registered with the native runtime. If it is unavailable, the local tool handle still exists for tests and progressive enhancement behavior.
+
+## Common Use Cases
+
+- Search and filtering tools for catalogs, docs, dashboards, and help centers.
+- Safe write actions such as `cart.add`, `form.submit`, or `support.create_ticket`.
+- High-risk workflows such as checkout, account changes, or data exports with approval gates.
+- Agent-friendly interfaces for apps that should expose explicit capabilities instead of relying on UI automation.
 
 ## Sensitive Tools
 

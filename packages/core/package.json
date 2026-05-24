@@ -1,9 +1,37 @@
 {
   "name": "@webmcp-js/core",
-  "version": "0.1.0",
-  "description": "Developer-first TypeScript toolkit for safe, typed, approval-aware WebMCP tools.",
+  "version": "0.1.1",
+  "description": "Type-safe WebMCP toolkit for registering validated, approval-aware browser tools.",
   "type": "module",
   "license": "MIT",
+  "keywords": [
+    "webmcp",
+    "mcp",
+    "model-context-protocol",
+    "browser-ai",
+    "ai-tools",
+    "agent-tools",
+    "tool-calling",
+    "structured-tools",
+    "typescript",
+    "zod",
+    "json-schema",
+    "approval-workflow",
+    "audit",
+    "safety"
+  ],
+  "homepage": "https://github.com/webmcp-js/webmcp-js#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webmcp-js/webmcp-js.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/webmcp-js/webmcp-js/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
