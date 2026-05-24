@@ -7,6 +7,9 @@
     "build": "vitepress build .",
     "preview": "vitepress preview . --host 0.0.0.0"
   },
+  "dependencies": {
+    "@webmcp-js/core": "workspace:*"
+  },
   "devDependencies": {
     "vitepress": "^1.6.3"
   }

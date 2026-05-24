@@ -1,0 +1,252 @@
+.demo-shell {
+  display: grid;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 32px 24px 56px;
+}
+
+.demo-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: end;
+  padding: 32px 0 8px;
+}
+
+.demo-hero h1 {
+  margin: 0;
+  max-width: 760px;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.demo-hero p {
+  max-width: 720px;
+  margin: 14px 0 0;
+  color: var(--vp-c-text-2);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.demo-kicker {
+  margin: 0 0 8px;
+  color: var(--vp-c-brand-1);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.runtime-panel,
+.demo-panel {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+}
+
+.runtime-panel {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.runtime-panel span:last-child {
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #d97706;
+}
+
+.status-dot.online {
+  background: #059669;
+}
+
+.status-dot.offline {
+  background: #d97706;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.demo-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.panel-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.demo-panel label {
+  display: grid;
+  gap: 8px;
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.demo-panel input {
+  width: 100%;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.primary-button,
+.result-card button,
+.segmented-control button {
+  min-height: 40px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 9px 12px;
+}
+
+.primary-button {
+  border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-brand-1);
+  color: var(--vp-c-white);
+}
+
+.results-list,
+.cart-items,
+.log-list,
+.tool-list {
+  display: grid;
+  gap: 10px;
+}
+
+.result-card,
+.cart-items article,
+.log-list article,
+.tool-list article {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg);
+  padding: 12px;
+}
+
+.result-card div,
+.cart-items article,
+.tool-list article {
+  min-width: 0;
+}
+
+.result-card strong,
+.result-card span,
+.cart-items strong,
+.cart-items span,
+.tool-list strong,
+.tool-list span,
+.log-list strong,
+.log-list span {
+  display: block;
+}
+
+.result-card span,
+.cart-items span,
+.tool-list span,
+.log-list span,
+.empty-state {
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.segmented-control button.active {
+  border-color: var(--vp-c-brand-1);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 16%, transparent);
+  color: var(--vp-c-brand-1);
+}
+
+.cart-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cart-summary strong {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.log-list article {
+  display: grid;
+  justify-content: stretch;
+}
+
+.log-list article.success {
+  border-left: 4px solid #059669;
+}
+
+.log-list article.error {
+  border-left: 4px solid #dc2626;
+}
+
+.log-list article.info {
+  border-left: 4px solid #2563eb;
+}
+
+.tool-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tool-list article {
+  display: grid;
+  justify-content: stretch;
+}
+
+.tool-list code {
+  width: max-content;
+  margin-top: 4px;
+}
+
+@media (max-width: 760px) {
+  .demo-shell {
+    padding: 16px 16px 40px;
+  }
+
+  .demo-hero,
+  .demo-grid,
+  .tool-list {
+    grid-template-columns: 1fr;
+  }
+
+  .demo-hero h1 {
+    font-size: 34px;
+  }
+
+  .demo-hero p {
+    font-size: 16px;
+  }
+}
