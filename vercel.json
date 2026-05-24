@@ -3,4 +3,3 @@
   "outputDirectory": "examples/vanilla/dist",
   "installCommand": "pnpm install"
 }
- 
