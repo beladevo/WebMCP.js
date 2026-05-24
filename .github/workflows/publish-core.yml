@@ -3,9 +3,6 @@ name: Publish Core
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - "core-v*"
   workflow_dispatch:
 
 jobs:
@@ -31,6 +28,19 @@ jobs:
       - run: pnpm --filter @webmcp-js/core build
       - run: pnpm --filter @webmcp-js/core typecheck
       - run: pnpm --filter @webmcp-js/core test
+
+      - name: Configure npm auth
+        shell: bash
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::Missing NPM_TOKEN repository secret"
+            exit 1
+          fi
+
+          npm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
+          npm whoami --registry=https://registry.npmjs.org/
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @webmcp-js/core
         run: pnpm --filter @webmcp-js/core publish --no-git-checks --provenance
