@@ -3,6 +3,7 @@ export { matchesToolName, decideApproval } from "./approval.js";
 export { createDevAdapter } from "./dev-adapter.js";
 export { showApprovalDialog } from "./approval-dialog.js";
 export type * from "./types.js";
+export { condition } from "./condition.js";
 
 import { createNativeAdapter } from "./adapter.js";
 import { decideApproval } from "./approval.js";
@@ -10,12 +11,15 @@ import { showApprovalDialog } from "./approval-dialog.js";
 import { createBadge } from "./badge.js";
 import { createLogger } from "./logger.js";
 import { toJsonSchema, validateInput } from "./schema.js";
+import { condition as _condition } from "./condition.js";
 import type {
   AuditEvent,
   CreateWebMCPOptions,
+  ExplainResult,
   RegisteredToolHandle,
   RegisteredWebMCPTool,
   StructuredToolError,
+  ToolCondition,
   ToolDefinition,
   ToolResult,
   ToolRisk,
@@ -23,6 +27,11 @@ import type {
 } from "./types.js";
 
 export { z } from "zod";
+
+async function evaluateConditions(conditions: ToolCondition[]): Promise<string[]> {
+  const results = await Promise.all(conditions.map((c) => c.check()));
+  return conditions.filter((_, i) => !results[i]).map((c) => c.reason);
+}
 
 export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance {
   const adapter = options.adapter ?? createNativeAdapter();
@@ -138,6 +147,21 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
 
       logger.debug(`Executing tool ${name}.`, { risk });
       await options.audit?.onToolCallStart?.(baseEvent);
+
+      if (definition.enabledWhen && definition.enabledWhen.length > 0) {
+        const failedReasons = await evaluateConditions(definition.enabledWhen);
+        if (failedReasons.length > 0) {
+          logger.debug(`Conditions failed for ${name}.`, failedReasons);
+          const error = buildError(
+            "TOOL_CONDITION_FAILED",
+            `Tool ${name} is not currently available.`,
+            risk,
+            failedReasons
+          );
+          await emitDenied(name, risk, rawInput, error);
+          return { ok: false, error };
+        }
+      }
 
       const validation = validateInput(definition.input, rawInput);
       if (!validation.success) {
@@ -259,6 +283,23 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
     }
   }
 
+  async function explain(name: string): Promise<ExplainResult> {
+    const handle = tools.get(name);
+    if (!handle) {
+      return { tool: name, available: false, reasons: ["Tool not registered"] };
+    }
+    const conditions = handle.definition.enabledWhen;
+    if (!conditions || conditions.length === 0) {
+      return { tool: name, available: true, reasons: [] };
+    }
+    const failedReasons = await evaluateConditions(conditions);
+    return {
+      tool: name,
+      available: failedReasons.length === 0,
+      reasons: failedReasons
+    };
+  }
+
   return {
     tool: tool as WebMCPInstance["tool"],
     unregister,
@@ -267,6 +308,7 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
     },
     listTools() {
       return [...tools.values()];
-    }
+    },
+    explain
   };
 }

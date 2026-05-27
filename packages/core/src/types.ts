@@ -9,7 +9,19 @@ export type WebMCPErrorCode =
   | "VALIDATION_FAILED"
   | "APPROVAL_REQUIRED"
   | "APPROVAL_REJECTED"
-  | "TOOL_EXECUTION_FAILED";
+  | "TOOL_EXECUTION_FAILED"
+  | "TOOL_CONDITION_FAILED";
+
+export interface ToolCondition {
+  check: () => boolean | Promise<boolean>;
+  reason: string;
+}
+
+export interface ExplainResult {
+  tool: string;
+  available: boolean;
+  reasons: string[];
+}
 
 export interface StructuredToolError {
   code: WebMCPErrorCode;
@@ -123,6 +135,7 @@ export interface ToolDefinition<TInput, TOutput> {
   risk?: ToolRisk;
   approval?: boolean | ApprovalOptions;
   audit?: boolean | AuditOptions;
+  enabledWhen?: ToolCondition[];
   run: (input: TInput, context: ToolExecutionContext) => Promise<TOutput> | TOutput;
 }
 
@@ -157,4 +170,5 @@ export interface WebMCPInstance {
   unregister(name: string): Promise<void>;
   getTool(name: string): RegisteredToolHandle | undefined;
   listTools(): RegisteredToolHandle[];
+  explain(name: string): Promise<ExplainResult>;
 }
