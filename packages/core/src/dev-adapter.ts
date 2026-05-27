@@ -373,6 +373,7 @@ export function createDevAdapter(): WebMCPAdapter {
   }
 
   return {
+    name: "dev",
     isAvailable: () => typeof document !== "undefined",
     registerTool(tool) {
       tools.set(tool.name, tool);

@@ -4,21 +4,31 @@ export { createDevAdapter } from "./dev-adapter.js";
 export { showApprovalDialog } from "./approval-dialog.js";
 export type * from "./types.js";
 export { condition } from "./condition.js";
+export { extractUriParams, matchesUriTemplate } from "./resource.js";
 
 import { createNativeAdapter } from "./adapter.js";
 import { decideApproval } from "./approval.js";
 import { showApprovalDialog } from "./approval-dialog.js";
 import { createBadge } from "./badge.js";
-import { createLogger } from "./logger.js";
-import { toJsonSchema, validateInput } from "./schema.js";
 import { condition as _condition } from "./condition.js";
+import { createLogger } from "./logger.js";
+import { extractUriParams } from "./resource.js";
+import { toJsonSchema, validateInput } from "./schema.js";
 import type {
+  ApprovalRequest,
   AuditEvent,
   CreateWebMCPOptions,
+  DryRunResult,
   ExplainResult,
+  RegisteredResourceHandle,
   RegisteredToolHandle,
+  RegisteredWebMCPResource,
   RegisteredWebMCPTool,
+  ResourceDefinition,
+  RuntimeStatus,
+  StaticResourceDefinition,
   StructuredToolError,
+  TemplateResourceDefinition,
   ToolCondition,
   ToolDefinition,
   ToolResult,
@@ -38,6 +48,7 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
   const unavailable = options.unavailable ?? "warn";
   const logger = createLogger(options.debug);
   const tools = new Map<string, RegisteredToolHandle>();
+  const resources = new Map<string, RegisteredResourceHandle>();
   const badge = options.showSupportWebMCP
     ? createBadge({
         ...(options.appName ? { appName: options.appName } : {}),
@@ -81,6 +92,7 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
     input: unknown;
     risk: ToolRisk;
     reason: string;
+    dryRunResult?: DryRunResult;
   }): Promise<ToolResult<true>> {
     const provider = options.approval;
     if (!provider || !provider.mode || provider.mode === "none") {
@@ -94,23 +106,20 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
       };
     }
 
+    const approvalRequest: ApprovalRequest = {
+      tool: request.name,
+      description: request.description,
+      input: request.input,
+      risk: request.risk,
+      reason: request.reason,
+      ...(request.dryRunResult ? { dryRunResult: request.dryRunResult } : {})
+    };
+
     let accepted: boolean;
     if (provider.mode === "custom") {
-      accepted = await provider.approve({
-        tool: request.name,
-        description: request.description,
-        input: request.input,
-        risk: request.risk,
-        reason: request.reason
-      });
+      accepted = await provider.approve(approvalRequest);
     } else if (provider.mode === "built-in") {
-      accepted = await showApprovalDialog({
-        tool: request.name,
-        description: request.description,
-        input: request.input,
-        risk: request.risk,
-        reason: request.reason
-      });
+      accepted = await showApprovalDialog(approvalRequest);
     } else {
       accepted =
         typeof globalThis.confirm === "function" &&
@@ -191,11 +200,30 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
         approvalRequest.config = options.approval;
       }
 
-      const approval = decideApproval(approvalRequest);
+      let approval = decideApproval(approvalRequest);
       logger.debug(`Approval decision for ${name}.`, approval);
+
+      if (!approval.required && definition.confirmWhen) {
+        const needsConfirm = await definition.confirmWhen(validation.data as TInput);
+        if (needsConfirm) {
+          approval = { required: true, reason: "Tool condition requires confirmation for this input." };
+          logger.debug(`confirmWhen triggered approval for ${name}.`);
+        }
+      }
 
       if (approval.required) {
         logger.debug(`Approval required for ${name}.`);
+
+        let dryRunResult: DryRunResult | undefined;
+        if (definition.dryRun) {
+          try {
+            dryRunResult = await definition.dryRun(validation.data as TInput);
+            logger.debug(`dryRun completed for ${name}.`, dryRunResult);
+          } catch (cause) {
+            logger.warn(`dryRun failed for ${name}, proceeding without preview.`, cause);
+          }
+        }
+
         const approvalResult = await requestApproval({
           name,
           description: definition.description,
@@ -204,7 +232,8 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
           reason:
             definition.approval && typeof definition.approval !== "boolean"
               ? (definition.approval.reason ?? approval.reason)
-              : approval.reason
+              : approval.reason,
+          ...(dryRunResult ? { dryRunResult } : {})
         });
         if (!approvalResult.ok) {
           logger.debug(`Approval rejected or unavailable for ${name}.`, approvalResult.error);
@@ -244,15 +273,47 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
       execute
     };
 
+    async function runDryRun(rawInput: unknown): Promise<ToolResult<DryRunResult>> {
+      if (!definition.dryRun) {
+        return {
+          ok: false,
+          error: buildError("TOOL_EXECUTION_FAILED", `Tool ${name} does not define a dryRun.`, risk)
+        };
+      }
+      const validation = validateInput(definition.input, rawInput);
+      if (!validation.success) {
+        return {
+          ok: false,
+          error: buildError("VALIDATION_FAILED", `Invalid input for tool ${name}.`, risk, validation.error)
+        };
+      }
+      try {
+        const result = await definition.dryRun(validation.data as TInput);
+        return { ok: true, data: result };
+      } catch (cause) {
+        return {
+          ok: false,
+          error: buildError("TOOL_EXECUTION_FAILED", `dryRun for ${name} failed.`, risk, cause)
+        };
+      }
+    }
+
     const handle: RegisteredToolHandle<TInput, TOutput> = {
       name,
       definition,
       webmcpTool,
       execute,
+      dryRun: runDryRun,
       async unregister() {
         await unregister(name);
       }
     };
+    if (tools.has(name)) {
+      logger.debug(`Replacing existing tool ${name}.`);
+      if (adapter.isAvailable()) {
+        void Promise.resolve(adapter.unregisterTool?.(name)).catch(() => undefined);
+      }
+    }
     tools.set(name, handle as RegisteredToolHandle);
     badge?.update();
 
@@ -283,6 +344,91 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
     }
   }
 
+  function resource<TParams extends Record<string, string>>(
+    name: string,
+    definition: ResourceDefinition<TParams>
+  ): RegisteredResourceHandle<TParams> {
+    async function readResource(uri: string): Promise<ToolResult<string>> {
+      try {
+        let text: string;
+        if ("uri" in definition) {
+          const staticDef = definition as StaticResourceDefinition;
+          if (uri !== staticDef.uri) {
+            return {
+              ok: false,
+              error: { code: "TOOL_EXECUTION_FAILED", message: `URI "${uri}" does not match resource "${name}".`, risk: "read" }
+            };
+          }
+          text = await staticDef.read();
+        } else {
+          const templateDef = definition as TemplateResourceDefinition<TParams>;
+          const params = extractUriParams(templateDef.uriTemplate, uri);
+          if (!params) {
+            return {
+              ok: false,
+              error: { code: "TOOL_EXECUTION_FAILED", message: `URI "${uri}" does not match template "${templateDef.uriTemplate}".`, risk: "read" }
+            };
+          }
+          text = await templateDef.read(params as TParams);
+        }
+        return { ok: true, data: text };
+      } catch (cause) {
+        return {
+          ok: false,
+          error: { code: "TOOL_EXECUTION_FAILED", message: `Resource ${name} failed to read.`, risk: "read", details: cause }
+        };
+      }
+    }
+
+    const webmcpResource: RegisteredWebMCPResource = {
+      name,
+      description: definition.description,
+      ...("mimeType" in definition && definition.mimeType ? { mimeType: definition.mimeType } : {}),
+      ...("uri" in definition ? { uri: definition.uri } : { uriTemplate: definition.uriTemplate }),
+      read: readResource
+    };
+
+    const handle: RegisteredResourceHandle<TParams> = {
+      name,
+      definition,
+      webmcpResource,
+      read: readResource,
+      async unregister() {
+        await unregisterResource(name);
+      }
+    };
+
+    if (resources.has(name)) {
+      logger.debug(`Replacing existing resource ${name}.`);
+      if (adapter.isAvailable()) {
+        void Promise.resolve(adapter.unregisterResource?.(name)).catch(() => undefined);
+      }
+    }
+    resources.set(name, handle as RegisteredResourceHandle);
+
+    logger.debug(`Registering resource ${name}.`);
+    if (adapter.isAvailable()) {
+      void Promise.resolve(adapter.registerResource?.(webmcpResource)).catch((cause) => {
+        logger.warn(`Failed to register resource ${name}.`, cause);
+      });
+    } else {
+      const message = "WebMCP runtime is unavailable; resource is registered locally only.";
+      if (unavailable === "throw") {
+        throw Object.assign(new Error(message), { code: "WEBMCP_UNAVAILABLE" });
+      }
+      if (unavailable === "warn") logger.warn(message, { resource: name });
+    }
+
+    return handle;
+  }
+
+  async function unregisterResource(name: string) {
+    resources.delete(name);
+    if (adapter.isAvailable()) {
+      await adapter.unregisterResource?.(name);
+    }
+  }
+
   async function explain(name: string): Promise<ExplainResult> {
     const handle = tools.get(name);
     if (!handle) {
@@ -300,15 +446,45 @@ export function createWebMCP(options: CreateWebMCPOptions = {}): WebMCPInstance 
     };
   }
 
+  function getRuntimeStatus(): RuntimeStatus {
+    return {
+      native: adapter.isAvailable(),
+      adapterName: adapter.name ?? "unknown",
+      registeredTools: tools.size,
+      registeredResources: resources.size
+    };
+  }
+
+  async function call(name: string, input: unknown): Promise<ToolResult> {
+    const handle = tools.get(name);
+    if (!handle) {
+      return {
+        ok: false,
+        error: { code: "TOOL_EXECUTION_FAILED", message: `Tool "${name}" not found.`, risk: "read" }
+      };
+    }
+    return handle.execute(input);
+  }
+
   return {
     tool: tool as WebMCPInstance["tool"],
+    resource: resource as WebMCPInstance["resource"],
     unregister,
+    unregisterResource,
     getTool(name) {
       return tools.get(name);
+    },
+    getResource(name) {
+      return resources.get(name);
     },
     listTools() {
       return [...tools.values()];
     },
-    explain
+    listResources() {
+      return [...resources.values()];
+    },
+    explain,
+    getRuntimeStatus,
+    call
   };
 }

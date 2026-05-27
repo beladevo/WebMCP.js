@@ -153,13 +153,53 @@ export function showApprovalDialog(request: ApprovalRequest): Promise<boolean> {
         "border:1px solid #e5e7eb",
         "border-radius:8px",
         "padding:10px 12px",
-        "margin-bottom:20px"
+        "margin-bottom:14px"
       ].join(";");
       const reasonText = document.createElement("p");
       reasonText.textContent = request.reason;
       reasonText.style.cssText = "font:400 13px/1.5 inherit;color:#4b5563;margin:0";
       reasonBox.append(reasonText);
       dialog.append(reasonBox);
+    }
+
+    // Dry run preview
+    if (request.dryRunResult) {
+      const dryRunBox = document.createElement("div");
+      dryRunBox.style.cssText = [
+        "background:#fffbeb",
+        "border:1px solid #fde68a",
+        "border-radius:8px",
+        "padding:12px 14px",
+        "margin-bottom:20px"
+      ].join(";");
+
+      const dryRunHeader = document.createElement("div");
+      dryRunHeader.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:6px";
+      dryRunHeader.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1.5v11M1.5 7h11" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+      const dryRunLabel = document.createElement("span");
+      dryRunLabel.textContent = "Preview";
+      dryRunLabel.style.cssText = "font:600 12px/1 inherit;color:#92400e;text-transform:uppercase;letter-spacing:0.05em";
+      dryRunHeader.append(dryRunLabel);
+      dryRunBox.append(dryRunHeader);
+
+      const summaryEl = document.createElement("p");
+      summaryEl.textContent = request.dryRunResult.summary;
+      summaryEl.style.cssText = "font:400 13px/1.5 inherit;color:#78350f;margin:0";
+      dryRunBox.append(summaryEl);
+
+      if (request.dryRunResult.effects && request.dryRunResult.effects.length > 0) {
+        const effectsList = document.createElement("ul");
+        effectsList.style.cssText = "margin:8px 0 0;padding:0 0 0 16px";
+        for (const effect of request.dryRunResult.effects) {
+          const li = document.createElement("li");
+          li.textContent = effect;
+          li.style.cssText = "font:400 12px/1.6 inherit;color:#92400e";
+          effectsList.append(li);
+        }
+        dryRunBox.append(effectsList);
+      }
+
+      dialog.append(dryRunBox);
     }
 
     // Action buttons

@@ -13,6 +13,7 @@ declare global {
 
 export function createNativeAdapter(): WebMCPAdapter {
   return {
+    name: "native",
     isAvailable() {
       return typeof globalThis.navigator?.modelContext?.registerTool === "function";
     },

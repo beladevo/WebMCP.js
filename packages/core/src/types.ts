@@ -40,12 +40,18 @@ export interface ApprovalRule {
   reason?: string;
 }
 
+export interface DryRunResult {
+  summary: string;
+  effects?: string[];
+}
+
 export interface ApprovalRequest {
   tool: string;
   description: string;
   input: unknown;
   risk: ToolRisk;
   reason: string;
+  dryRunResult?: DryRunResult;
 }
 
 export type ApprovalProvider = (request: ApprovalRequest) => boolean | Promise<boolean>;
@@ -96,10 +102,65 @@ export interface AuditConfig {
   onToolCallError?: (event: AuditErrorEvent) => void | Promise<void>;
 }
 
+// ─── Resources ───────────────────────────────────────────────────────────────
+
+export interface StaticResourceDefinition {
+  uri: string;
+  description: string;
+  mimeType?: string;
+  read: () => string | Promise<string>;
+}
+
+export interface TemplateResourceDefinition<
+  TParams extends Record<string, string> = Record<string, string>
+> {
+  uriTemplate: string;
+  description: string;
+  mimeType?: string;
+  read: (params: TParams) => string | Promise<string>;
+}
+
+export type ResourceDefinition<TParams extends Record<string, string> = Record<string, string>> =
+  | StaticResourceDefinition
+  | TemplateResourceDefinition<TParams>;
+
+export interface RegisteredWebMCPResource {
+  name: string;
+  description: string;
+  mimeType?: string;
+  uri?: string;
+  uriTemplate?: string;
+  read(uri: string): Promise<ToolResult<string>>;
+}
+
+export interface RegisteredResourceHandle<
+  TParams extends Record<string, string> = Record<string, string>
+> {
+  name: string;
+  definition: ResourceDefinition<TParams>;
+  webmcpResource: RegisteredWebMCPResource;
+  read(uri: string): Promise<ToolResult<string>>;
+  unregister(): Promise<void>;
+}
+
+// ─── Runtime status ──────────────────────────────────────────────────────────
+
+export interface RuntimeStatus {
+  native: boolean;
+  adapterName: string;
+  registeredTools: number;
+  registeredResources: number;
+}
+
+// ─── Adapter ─────────────────────────────────────────────────────────────────
+
 export interface WebMCPAdapter {
+  name?: string;
   isAvailable(): boolean;
   registerTool(tool: RegisteredWebMCPTool): void | Promise<void>;
   unregisterTool?(name: string): void | Promise<void>;
+  registerResource?(resource: RegisteredWebMCPResource): void | Promise<void>;
+  unregisterResource?(name: string): void | Promise<void>;
 }
 
 export interface RegisteredWebMCPTool {
@@ -136,6 +197,8 @@ export interface ToolDefinition<TInput, TOutput> {
   approval?: boolean | ApprovalOptions;
   audit?: boolean | AuditOptions;
   enabledWhen?: ToolCondition[];
+  confirmWhen?: (input: TInput) => boolean | Promise<boolean>;
+  dryRun?: (input: TInput) => DryRunResult | Promise<DryRunResult>;
   run: (input: TInput, context: ToolExecutionContext) => Promise<TOutput> | TOutput;
 }
 
@@ -147,6 +210,7 @@ export interface RegisteredToolHandle<TInput = unknown, TOutput = unknown> {
   definition: ToolDefinition<TInput, TOutput>;
   webmcpTool: RegisteredWebMCPTool;
   execute(input: unknown): Promise<ToolResult<TOutput>>;
+  dryRun(input: unknown): Promise<ToolResult<DryRunResult>>;
   unregister(): Promise<void>;
 }
 
@@ -167,8 +231,17 @@ export interface WebMCPInstance {
     name: string,
     definition: ToolDefinition<TInput, TOutput>
   ): RegisteredToolHandle<TInput, TOutput>;
+  resource<TParams extends Record<string, string> = Record<string, string>>(
+    name: string,
+    definition: ResourceDefinition<TParams>
+  ): RegisteredResourceHandle<TParams>;
   unregister(name: string): Promise<void>;
+  unregisterResource(name: string): Promise<void>;
   getTool(name: string): RegisteredToolHandle | undefined;
+  getResource(name: string): RegisteredResourceHandle | undefined;
   listTools(): RegisteredToolHandle[];
+  listResources(): RegisteredResourceHandle[];
   explain(name: string): Promise<ExplainResult>;
+  getRuntimeStatus(): RuntimeStatus;
+  call(name: string, input: unknown): Promise<ToolResult>;
 }
