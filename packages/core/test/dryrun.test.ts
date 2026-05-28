@@ -88,7 +88,7 @@ describe("dryRun on handle", () => {
 
 describe("dryRun auto-called before confirmation dialog", () => {
   it("passes dryRunResult to custom approval provider", async () => {
-    const approve = vi.fn(async (_req: ApprovalRequest) => true);
+    const approve = vi.fn<(req: ApprovalRequest) => Promise<boolean>>(async () => true);
     const mcp = createWebMCP({
       adapter: silentAdapter(),
       approval: { mode: "custom", approve }
@@ -227,7 +227,7 @@ describe("confirmWhen", () => {
   });
 
   it("confirmWhen + dryRun work together", async () => {
-    const approve = vi.fn(async (_req: ApprovalRequest) => true);
+    const approve = vi.fn<(req: ApprovalRequest) => Promise<boolean>>(async () => true);
     const mcp = createWebMCP({
       adapter: silentAdapter(),
       approval: { mode: "custom", approve }

@@ -10,7 +10,6 @@ import { createNativeAdapter } from "./adapter.js";
 import { decideApproval } from "./approval.js";
 import { showApprovalDialog } from "./approval-dialog.js";
 import { createBadge } from "./badge.js";
-import { condition as _condition } from "./condition.js";
 import { createLogger } from "./logger.js";
 import { extractUriParams } from "./resource.js";
 import { toJsonSchema, validateInput } from "./schema.js";
