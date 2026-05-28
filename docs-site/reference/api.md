@@ -17,12 +17,30 @@ const mcp = createWebMCP({
 
 ```ts
 interface WebMCPInstance {
+  // Tools
   tool(name, definition): RegisteredToolHandle;
-  unregister(name: string): Promise<void>;
   getTool(name: string): RegisteredToolHandle | undefined;
   listTools(): RegisteredToolHandle[];
+  unregister(name: string): Promise<void>;
+  call(name: string, input: unknown): Promise<ToolResult>;
+
+  // Resources
+  resource(name, definition): RegisteredResourceHandle;
+  getResource(name: string): RegisteredResourceHandle | undefined;
+  listResources(): RegisteredResourceHandle[];
+  unregisterResource(name: string): Promise<void>;
+
+  // Diagnostics
+  explain(name: string): Promise<ExplainResult>;
+  getRuntimeStatus(): RuntimeStatus;
 }
 ```
+
+`call(name, input)` is shorthand for `getTool(name)?.execute(input)`.
+
+`explain(name)` evaluates `enabledWhen` conditions and returns `{ tool, available, reasons[] }`.
+
+`getRuntimeStatus()` returns `{ native, adapterName, registeredTools, registeredResources }`.
 
 ## `tool(name, definition)`
 
@@ -34,7 +52,7 @@ mcp.tool("cart.add", {
   input: z.object({ productId: z.string(), quantity: z.number().min(1).default(1) }),
   risk: "high",
   approval: true,
-  run: ({ productId, quantity }, context) => cart.add(productId, quantity)
+  run: ({ productId, quantity }) => cart.add(productId, quantity)
 });
 ```
 
@@ -42,12 +60,15 @@ mcp.tool("cart.add", {
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `description` | `string` | Human-readable description of the tool. |
-| `input` | `unknown` | Optional Zod schema or JSON Schema-compatible input schema. |
-| `output` | `unknown` | Optional Zod schema or JSON Schema-compatible output schema. |
+| `description` | `string` | Human-readable description. |
+| `input` | `ZodSchema \| JSONSchema` | Input schema. Validated before execution. |
+| `output` | `ZodSchema \| JSONSchema` | Output schema. Used for JSON Schema generation. |
 | `risk` | `ToolRisk` | Defaults to `read`. |
 | `approval` | `boolean \| ApprovalOptions` | Tool-level approval override. |
 | `audit` | `boolean \| AuditOptions` | Tool-level audit options. |
+| `enabledWhen` | `ToolCondition[]` | Runtime gate conditions. |
+| `confirmWhen` | `(input) => boolean \| Promise<boolean>` | Dynamic per-call approval trigger. |
+| `dryRun` | `(input) => DryRunResult \| Promise<DryRunResult>` | Preview shown before approval dialog. |
 | `run` | `(input, context) => output` | Tool implementation. |
 
 ## `RegisteredToolHandle`
@@ -58,8 +79,36 @@ interface RegisteredToolHandle<TInput = unknown, TOutput = unknown> {
   definition: ToolDefinition<TInput, TOutput>;
   webmcpTool: RegisteredWebMCPTool;
   execute(input: unknown): Promise<ToolResult<TOutput>>;
+  dryRun(input: unknown): Promise<ToolResult<DryRunResult>>;
   unregister(): Promise<void>;
 }
+```
+
+## `resource(name, definition)`
+
+Registers a resource. See the [Resources guide](/guide/resources) for examples.
+
+## `RegisteredResourceHandle`
+
+```ts
+interface RegisteredResourceHandle<TParams = Record<string, string>> {
+  name: string;
+  definition: ResourceDefinition<TParams>;
+  read(uri: string): Promise<ToolResult<string>>;
+  unregister(): Promise<void>;
+}
+```
+
+## `condition(check, reason)`
+
+Helper to build `ToolCondition` objects for `enabledWhen`:
+
+```ts
+import { condition } from "@webmcp-js/core";
+
+enabledWhen: [
+  condition(() => authStore.isLoggedIn(), "User must be logged in")
+]
 ```
 
 ## Result and Error Codes
@@ -68,6 +117,7 @@ interface RegisteredToolHandle<TInput = unknown, TOutput = unknown> {
 type WebMCPErrorCode =
   | "WEBMCP_UNAVAILABLE"
   | "VALIDATION_FAILED"
+  | "TOOL_CONDITION_FAILED"
   | "APPROVAL_REQUIRED"
   | "APPROVAL_REJECTED"
   | "TOOL_EXECUTION_FAILED";

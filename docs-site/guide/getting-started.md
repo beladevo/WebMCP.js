@@ -46,6 +46,20 @@ if (result?.ok) {
 }
 ```
 
+## Dev Adapter
+
+Use `createDevAdapter()` during development for an in-browser panel that lists registered tools and lets you run them with custom JSON input. Pass `undefined` (the default native adapter) in production.
+
+```ts
+import { createWebMCP, createDevAdapter } from "@webmcp-js/core";
+
+const mcp = createWebMCP({
+  adapter: import.meta.env.DEV ? createDevAdapter() : undefined
+});
+```
+
+The panel appears as a fixed overlay in the bottom-left corner, shows each tool's risk level, and displays results inline.
+
 ## Show the Support Badge
 
 Set `showSupportWebMCP: true` to render a small page badge. The badge shows app name, runtime availability, and the tools registered on the page.

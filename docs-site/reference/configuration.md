@@ -21,9 +21,15 @@ type ApprovalPolicy = "risk-based" | "require-all" | "allow-all";
 type ApprovalConfig =
   | { mode?: undefined; policy?: ApprovalPolicy; rules?: ApprovalRule[] }
   | { mode: "browser-dialog"; policy?: ApprovalPolicy; rules?: ApprovalRule[] }
+  | { mode: "built-in"; policy?: ApprovalPolicy; rules?: ApprovalRule[] }
   | { mode: "custom"; approve: ApprovalProvider; policy?: ApprovalPolicy; rules?: ApprovalRule[] }
   | { mode: "none"; policy?: ApprovalPolicy; rules?: ApprovalRule[] };
 ```
+
+- `browser-dialog` — uses `window.confirm`. Good for demos.
+- `built-in` — styled in-page modal that shows tool name, risk, reason, and dry run preview.
+- `custom` — full control; `approve` receives an `ApprovalRequest` and must return a boolean.
+- `none` — no UI; any tool that requires approval returns `APPROVAL_REQUIRED`.
 
 ## Audit Config
 

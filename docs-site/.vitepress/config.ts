@@ -22,6 +22,7 @@ export default defineConfig({
           { text: "Getting Started", link: "/guide/getting-started" },
           { text: "Core Concepts", link: "/guide/core-concepts" },
           { text: "Approvals", link: "/guide/approvals" },
+          { text: "Resources", link: "/guide/resources" },
           { text: "Security", link: "/guide/security" },
           { text: "React", link: "/guide/react" },
           { text: "Testing", link: "/guide/testing" },
