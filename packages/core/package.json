@@ -1,6 +1,6 @@
 {
   "name": "@webmcp-js/core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Type-safe WebMCP toolkit for registering validated, approval-aware browser tools.",
   "type": "module",
   "license": "MIT",
